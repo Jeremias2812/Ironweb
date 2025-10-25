@@ -1,0 +1,39 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0b0f14;
+  --fg: #e6edf3;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+}
+a { color: #8ab4f8; }
+.container { @apply max-w-6xl mx-auto px-4; }
+.card { @apply bg-white/5 rounded-2xl p-4 shadow-md border border-white/10; }
+.btn { @apply inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 transition; }
+.input { @apply w-full rounded-xl bg-white/10 border border-white/20 px-3 py-2 focus:outline-none; }
+.table { @apply w-full text-sm; }
+
+/* ====== Print isolation for reports (prevents blank pages) ====== */
+@media print {
+  /* Neutral base */
+  html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; height: auto !important; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+  /* Mostrar solo #print-root (sin ocultar ancestros) */
+  #__next > :not(#print-root) { display: none !important; }
+  #print-root { display: block !important; position: static !important; }
+
+  /* Quitar cromo/layout que puede sumar alto extra */
+  header, nav, footer, .no-print, .editor-only, .app-topbar { display: none !important; }
+  main { margin: 0 !important; padding: 0 !important; }
+}
