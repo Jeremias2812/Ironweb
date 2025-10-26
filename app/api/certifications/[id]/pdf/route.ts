@@ -181,10 +181,17 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     if (shouldStore) {
       const bucket = 'certifications';
       const fileName = `${id}-${Date.now()}.pdf`;
-      const blob = new Blob([bytes], { type: 'application/pdf' });
+
+      // Convertimos a Buffer compatible con Node.js
+      const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+      const buffer = Buffer.from(u8);
+
       const { data: up, error: upErr } = await supabase.storage
         .from(bucket)
-        .upload(fileName, blob, { contentType: 'application/pdf', upsert: false });
+        .upload(fileName, buffer, {
+          contentType: 'application/pdf',
+          upsert: false,
+        });
       if (upErr) throw upErr;
 
       // Pública o firmada
