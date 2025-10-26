@@ -1,14 +1,13 @@
 'use client';
 
-import StepNav from '@/components/reports/StepNav';
 import HeaderForm from './HeaderForm';
 import UTSectionSmart from './UTSectionSmart';
 
 // Tipado de props que recibe el layout del editor
 export type EditorLayoutProps = {
   // Navegación por pasos
-  step: 1 | 2 | 3 | 4;
-  setStep: (n: 1 | 2 | 3 | 4) => void;
+  step: number;
+  setStep: (n: number) => void;
   error?: string | null;
 
   // Cabecera
