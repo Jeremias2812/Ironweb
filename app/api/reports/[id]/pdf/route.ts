@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabaseServer";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { PDFDocument } from "pdf-lib";
 import playwright from "playwright";
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
-  const supabase = createClient();
+  const supabase = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { persistSession: false } }
+  );
   const id = params.id;
 
   try {
@@ -29,16 +33,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     const bytes = await page.pdf({ format: "A4" });
     await browser.close();
 
-    // === 3. Convierte los bytes a ArrayBuffer para subir ===
-    const arrayBuffer: ArrayBuffer =
-      bytes instanceof Uint8Array
-        ? bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
-        : (bytes as any).buffer
-        ? (bytes as Buffer).buffer.slice(
-            (bytes as Buffer).byteOffset,
-            (bytes as Buffer).byteOffset + (bytes as Buffer).byteLength
-          )
-        : (bytes as ArrayBuffer);
+    // === 3. Prepara el cuerpo del archivo para subir (Buffer/Uint8Array es válido) ===
+    // Playwright devuelve un Buffer (que es un Uint8Array). Supabase acepta ArrayBufferView.
+    const fileBody = bytes as Uint8Array;
 
     // === 4. Sube el PDF a Supabase Storage ===
     const bucket = "certifications";
@@ -46,7 +43,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
     const { data: up, error: upErr } = await supabase.storage
       .from(bucket)
-      .upload(fileName, arrayBuffer, {
+      .upload(fileName, fileBody, {
         contentType: "application/pdf",
         upsert: false,
       });
