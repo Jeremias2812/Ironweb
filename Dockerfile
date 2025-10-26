@@ -1,15 +1,19 @@
+# Usa imagen con navegadores y deps del sistema ya listos
 FROM mcr.microsoft.com/playwright:v1.47.0-jammy
 
-ENV NODE_ENV=production \
-    NEXT_TELEMETRY_DISABLED=1 \
-    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
-    PORT=3000
-
 WORKDIR /app
-COPY package.json package-lock.json* pnpm-lock.yaml* yarn.lock* ./
-RUN npm ci --omit=dev
+
+# Instala TODAS las deps para poder construir (incluye dev)
+COPY package*.json ./
+RUN npm ci
+
+# Copia el código y construye
 COPY . .
 RUN npm run build
 
+# Quita devDependencies para la imagen final
+RUN npm prune --omit=dev
+
 EXPOSE 3000
+ENV PORT=3000 NODE_ENV=production
 CMD ["npm", "start"]
