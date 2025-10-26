@@ -4,17 +4,16 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  IMAGE_NAME: ironweb
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
-    permissions:
-      id-token: write
-      contents: read
-
-    env:
-      IMAGE_NAME: ironweb
-      REGISTRY: ${{ secrets.ACR_LOGIN_SERVER }}
 
     steps:
       - name: Checkout
@@ -28,25 +27,24 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Docker login to ACR
-        run: |
-          echo "${{ secrets.ACR_PASSWORD }}" | docker login ${{ env.REGISTRY }} -u ${{ secrets.ACR_USERNAME }} --password-stdin
+        run: echo "${{ secrets.ACR_PASSWORD }}" | docker login ${{ secrets.ACR_LOGIN_SERVER }} -u ${{ secrets.ACR_USERNAME }} --password-stdin
 
       - name: Build & Push image to ACR
         run: |
-          docker build -t $REGISTRY/$IMAGE_NAME:${{ github.sha }} -f Dockerfile .
-          docker push $REGISTRY/$IMAGE_NAME:${{ github.sha }}
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} -f Dockerfile .
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
       - name: Deploy to Azure Container Apps
         uses: azure/container-apps-deploy-action@v2
         with:
           resourceGroup: Recursos-iron
           containerAppName: ironweb
-          registryUrl: ${{ env.REGISTRY }}
+          registryUrl: ${{ secrets.ACR_LOGIN_SERVER }}
           registryUsername: ${{ secrets.ACR_USERNAME }}
           registryPassword: ${{ secrets.ACR_PASSWORD }}
-          imageToDeploy: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          targetPort: 3000
+          imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           ingress: external
+          targetPort: 3000
           environmentVariables: |
             PORT=3000
             NODE_ENV=production
