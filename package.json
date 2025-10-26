@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
+    "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/supabase-js": "^2.46.1",
     "@tanstack/react-table": "^8.20.5",
     "ai": "^3.4.33",
@@ -18,12 +19,12 @@
     "openai": "^4.57.0",
     "pdf-lib": "^1.17.1",
     "pgvector": "^0.1.8",
+    "playwright": "^1.56.1",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-hook-form": "^7.53.0",
     "zod": "^3.23.8",
-    "zustand": "^4.5.4",
-    "playwright": "^1.56.1"
+    "zustand": "^4.5.4"
   },
   "devDependencies": {
     "@types/node": "^20.11.30",
