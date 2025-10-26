@@ -5,7 +5,7 @@ WORKDIR /app
 
 # Instala TODAS las deps para poder construir (incluye dev)
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 # Copia el código y construye
 COPY . .
