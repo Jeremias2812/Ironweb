@@ -2,7 +2,6 @@
 
 import StepNav from '@/components/reports/StepNav';
 import HeaderForm from './HeaderForm';
-import MethodsTable from './MethodsTableAdapter';
 import UTSectionSmart from './UTSectionSmart';
 
 // Tipado de props que recibe el layout del editor
@@ -60,8 +59,8 @@ export default function EditorLayout(props: EditorLayoutProps) {
 
       {/* Step 2: Métodos */}
       {step === 2 && (
-        <div className="certificate-box">
-          <MethodsTable methods={props.methods} setMethods={props.setMethods} />
+        <div className="certificate-box text-sm text-white/70">
+          Sección de métodos deshabilitada temporalmente.
         </div>
       )}
 
