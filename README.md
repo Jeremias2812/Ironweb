@@ -61,7 +61,7 @@ npm run dev
    ```
 3. Ejecuta el contenedor verificando que las variables estén presentes:
   ```bash
-  docker run -p 3000:3000 \
+  docker run -p 3000:8080 \
     -e NEXT_PUBLIC_SUPABASE_URL=... \
     -e NEXT_PUBLIC_SUPABASE_ANON_KEY=... \
     ironweb-app
@@ -70,7 +70,7 @@ npm run dev
   - Sube la imagen a Azure Container Registry (`az acr build` o `docker push`).
   - Crea una Web App for Containers apuntando a la imagen.
   - En **Configuration → Application settings** define las mismas variables de entorno.
-  - Define `PORT=8080` y, si usas Web App for Containers, alinea `WEBSITES_PORT=8080` (o el valor que prefieras) para que la plataforma rote el tráfico correctamente.
+  - Define `PORT=8080` y, si usas Web App for Containers, alinea `WEBSITES_PORT=8080` (o el valor que prefieras) para que la plataforma rote el tráfico correctamente. Azure inyectará `PORT`, que a su vez será respetado por `npm start` dentro del contenedor.
   - Si App Service construye la imagen desde el repositorio, define los *build arguments* `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` (o usa un workflow que ejecute `docker build` con `--build-arg`).
 
 > El layout principal se marca como `force-dynamic` para que Next.js no intente prerenderizar páginas que dependen de Supabase durante la fase de build dentro de Docker/Azure. Las credenciales se leerán en tiempo de ejecución desde las variables configuradas.
