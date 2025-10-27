@@ -70,7 +70,7 @@ npm run dev
   - Sube la imagen a Azure Container Registry (`az acr build` o `docker push`).
   - Crea una Web App for Containers apuntando a la imagen.
   - En **Configuration → Application settings** define las mismas variables de entorno.
-  - Asegúrate de que exista la variable `PORT` (Azure suele inyectar `PORT=8080`) o ajusta `WEBSITES_PORT` si deseas usar otro puerto.
+  - Define `PORT=8080` y, si usas Web App for Containers, alinea `WEBSITES_PORT=8080` (o el valor que prefieras) para que la plataforma rote el tráfico correctamente.
   - Si App Service construye la imagen desde el repositorio, define los *build arguments* `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` (o usa un workflow que ejecute `docker build` con `--build-arg`).
 
 > El layout principal se marca como `force-dynamic` para que Next.js no intente prerenderizar páginas que dependen de Supabase durante la fase de build dentro de Docker/Azure. Las credenciales se leerán en tiempo de ejecución desde las variables configuradas.
