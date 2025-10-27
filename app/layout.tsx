@@ -2,6 +2,8 @@ import "./globals.css";
 import SupabaseSession from "@/components/SupabaseSession";
 import TopBar from "@/components/TopBar";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Kynetic IT",
   description: "MVP web para gestión de piezas, servicios y despachos",
