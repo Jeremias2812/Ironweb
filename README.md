@@ -46,4 +46,30 @@ npm run dev
 - Usa RLS en cada tabla.
 - Añade auditoría en writes.
 - Limita costos del LLM (rate limit y logging).
+
 # iron-web-mvp
+
+## 7) Despliegue Docker / Azure App Service
+
+1. Asegúrate de tener las variables de entorno necesarias listas:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - Cualquier otra clave opcional (`OPENAI_API_KEY`, etc.).
+2. Construye la imagen localmente:
+   ```bash
+   docker build -t ironweb-app .
+   ```
+3. Ejecuta el contenedor verificando que las variables estén presentes:
+   ```bash
+   docker run -p 3000:3000 \
+     -e NEXT_PUBLIC_SUPABASE_URL=... \
+     -e NEXT_PUBLIC_SUPABASE_ANON_KEY=... \
+     ironweb-app
+   ```
+4. Para Azure App Service (Linux, contenedor personalizado):
+   - Sube la imagen a Azure Container Registry (`az acr build` o `docker push`).
+   - Crea una Web App for Containers apuntando a la imagen.
+   - En **Configuration → Application settings** define las mismas variables de entorno.
+   - Si App Service construye la imagen desde el repositorio, define los *build arguments* `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` (o usa un workflow que ejecute `docker build` con `--build-arg`).
+
+> El layout principal se marca como `force-dynamic` para que Next.js no intente prerenderizar páginas que dependen de Supabase durante la fase de build dentro de Docker/Azure. Las credenciales se leerán en tiempo de ejecución desde las variables configuradas.
