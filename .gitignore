@@ -11,3 +11,8 @@ npm-debug.log*
 yarn-error.log*
 .vscode/
 .idea/
+.next/
+node_modules/
+.env
+.env.*
+*.local
