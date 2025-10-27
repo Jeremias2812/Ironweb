@@ -1,7 +1,8 @@
-/** @type {import('next').NextConfig} */
+// next.config.js (o .mjs)
 const nextConfig = {
-  experimental: {
-    serverActions: { allowedOrigins: ['*'] }
-  },
+  reactStrictMode: true,
+  // No uses `output: 'export'` en apps con auth/API
+  // images: { unoptimized: true }, // solo si lo necesitas
 };
-export default nextConfig;
+
+module.exports = nextConfig;
