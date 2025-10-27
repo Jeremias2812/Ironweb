@@ -1,8 +1,10 @@
-// next.config.js (o .mjs)
+// next.config.mjs
+/** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // No uses `output: 'export'` en apps con auth/API
-  // images: { unoptimized: true }, // solo si lo necesitas
+  // No uses: output: 'export'
+  // Si usas imágenes remotas y no quieres optimización en server:
+  // images: { unoptimized: true },
 };
 
-module.exports = nextConfig;
+export default nextConfig;
