@@ -181,7 +181,8 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     if (shouldStore) {
       const bucket = 'certifications';
       const fileName = `${id}-${Date.now()}.pdf`;
-      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+      const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
       const { data: up, error: upErr } = await supabase.storage
         .from(bucket)
         .upload(fileName, blob, { contentType: 'application/pdf', upsert: false });

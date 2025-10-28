@@ -6,6 +6,7 @@ node_modules/
 dist/
 coverage/
 .env*
+!.env.example
 .DS_Store
 npm-debug.log*
 yarn-error.log*
@@ -15,4 +16,5 @@ yarn-error.log*
 node_modules/
 .env
 .env.*
+!.env.example
 *.local
