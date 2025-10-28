@@ -31,6 +31,7 @@
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
+import { createRequire } from 'module';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -40,9 +41,25 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!; // fallback local
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
-  // Dynamic import to avoid TS module resolution issues in editor while keeping runtime working
-  // @ts-ignore – editor may not resolve devDependency types for 'playwright'
-  const { chromium }: any = await import('playwright');
+  const requireModule = createRequire(import.meta.url);
+  const candidates = ['playwright', 'playwright-core'];
+  let chromium: any = null;
+  let lastError: unknown = null;
+
+  for (const moduleName of candidates) {
+    try {
+      const mod = requireModule(moduleName) as any;
+      chromium = mod?.chromium ?? mod?.default?.chromium ?? null;
+      if (chromium) break;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (!chromium) {
+    console.error('Playwright no está disponible en el servidor', lastError);
+    return NextResponse.json({ error: 'Playwright no está disponible en el servidor' }, { status: 500 });
+  }
   const reportId = params.id;
 
   try {
