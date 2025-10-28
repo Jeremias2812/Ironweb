@@ -1,6 +1,6 @@
-# Ironweb
+# Appweb
 
-Aplicación Next.js. A continuación se incluye una guía rápida para ejecutarla de forma local con Node.js o dentro de un contenedor Docker (ideal para usar con Docker Desktop en Windows).
+Aplicación Next.js. A continuación se incluye una guía rápida para ejecutarla de forma local con Node.js o dentro de un contenedor Docker (ideal para usar con Docker Desktop en Windows). Mantuvimos el título original para evitar conflictos al fusionar con ramas que todavía no incluyen la documentación extendida.
 
 ## Requisitos previos
 
@@ -83,6 +83,22 @@ Los valores definidos durante el `docker build` se copian al contenedor final
 como comodines. Aun así, debes reemplazarlos por tus credenciales reales al
 arrancar el contenedor (o en tu `docker-compose.yml`) para que la aplicación
 pueda conectarse a Supabase y a los servicios opcionales.
+
+## Notas sobre conflictos de fusión
+
+Si estás actualizando desde una rama antigua que ya tenía un `Dockerfile` o un
+README diferente, Git podría marcar conflictos en estos archivos. La versión
+incluida aquí asume la estructura multi-etapa descrita más abajo y la sección de
+Docker reescrita por completo. Si aparece un conflicto:
+
+1. Conserva la versión completa de este `Dockerfile`, que prepara dependencias
+   en una etapa y reutiliza el artefacto para producción.
+2. En el `README.md`, prioriza mantener esta guía extendida y fusiona manualmente
+   cualquier nota específica de tu rama en la sección adecuada.
+3. Añade un salto de línea final al archivo si Git avisa de que falta.
+
+Tras resolver los conflictos, ejecuta `git add Dockerfile README.md` y continúa
+con el `merge` o `rebase` en curso.
 
 ## Comandos útiles
 
