@@ -2,7 +2,60 @@
 
 // lib/reports.ts
 import { createClient } from '@supabase/supabase-js';
-import type { ReportData } from '@/components/reports/ReportRenderer';
+
+export type ReportData = {
+  reportDate: string;
+  reportNumber: string;
+  workOrderNumber: string;
+  client: string;
+  sector: string;
+  location: string;
+  scope: string;
+  serviceLevel: string;
+  frequency: string;
+  description: string;
+  pn: string;
+  serial: string;
+  partCode: string;
+  methods: Array<{
+    method: string;
+    result: string;
+    acceptance: string;
+    notes: string;
+  }>;
+  utPoints: Array<{
+    point: string;
+    min_mm: string;
+    actual_mm: string;
+  }>;
+  pm: {
+    magnetization_method: string;
+    field_direction: string;
+    particle_type: string;
+    yoke_id?: string;
+    yoke_exp?: string;
+    lux_uv_id?: string;
+    lux_uv_exp?: string;
+    lux_white_id?: string;
+    lux_white_exp?: string;
+    aerosol?: string;
+    aerosol_lot?: string;
+    aerosol_exp?: string;
+    notes?: string;
+  };
+  tests: Array<{
+    test_type: string;
+    applies: boolean;
+    instrument_id: string;
+    instrument_exp: string;
+    params: any;
+    notes: string;
+  }>;
+  sealType: string;
+  sealDue: string;
+  notes: string;
+  finalResult: string;
+};
 
 // Util: cliente de Supabase sin sesión persistente (para uso server-side en routes)
 function getSb() {
@@ -71,7 +124,34 @@ export async function getReportData(reportId: string): Promise<ReportData> {
   if (eRep) throw eRep;
   if (!rep) throw new Error('Informe no encontrado');
 
-  const woNumber = (rep.work_orders?.id || rep.work_order_id || '').toString().slice(0, 8);
+  const workOrderRelation = rep.work_orders as { id?: string | number } | Array<{ id?: string | number }> | null | undefined;
+  const workOrderId = Array.isArray(workOrderRelation)
+    ? workOrderRelation[0]?.id
+    : workOrderRelation?.id;
+  const woNumber = (workOrderId ?? rep.work_order_id ?? '').toString().slice(0, 8);
+
+  const partRelation = rep.parts as
+    | {
+        id?: string | number;
+        code?: string;
+        client?: string;
+        type?: string;
+        pn?: string;
+        serial?: string;
+        description?: string;
+      }
+    | Array<{
+        id?: string | number;
+        code?: string;
+        client?: string;
+        type?: string;
+        pn?: string;
+        serial?: string;
+        description?: string;
+      }>
+    | null
+    | undefined;
+  const part = Array.isArray(partRelation) ? partRelation[0] : partRelation;
 
   // 2) Métodos
   const { data: methodsRows, error: eMethods } = await sb
@@ -152,16 +232,16 @@ export async function getReportData(reportId: string): Promise<ReportData> {
     reportDate: rep.report_date || new Date().toISOString().slice(0, 10),
     reportNumber: rep.report_number || '',
     workOrderNumber: woNumber,
-    client: rep.client || rep.parts?.client || '',
+    client: rep.client || part?.client || '',
     sector: '', // si más adelante agregas columna, mapear aquí
     location: rep.location || '',
     scope: rep.service_scope || '',
     serviceLevel: '', // idem
     frequency: rep.frequency || '',
-    description: rep.description || rep.parts?.description || rep.parts?.type || '',
-    pn: rep.pn || rep.parts?.pn || '',
-    serial: rep.serial || rep.parts?.serial || '',
-    partCode: rep.parts?.code || '',
+    description: rep.description || part?.description || part?.type || '',
+    pn: rep.pn || part?.pn || '',
+    serial: rep.serial || part?.serial || '',
+    partCode: part?.code || '',
 
     methods: (methodsRows || []).map((m) => ({
       method: m.method,

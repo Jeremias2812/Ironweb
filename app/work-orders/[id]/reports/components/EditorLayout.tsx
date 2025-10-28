@@ -2,14 +2,14 @@
 
 import StepNav from '@/components/reports/StepNav';
 import HeaderForm from './HeaderForm';
-import MethodsTable from './MethodsTableAdapter';
+import MethodsTable from '@/components/reports/MethodsTable';
 import UTSectionSmart from './UTSectionSmart';
 
 // Tipado de props que recibe el layout del editor
 export type EditorLayoutProps = {
   // Navegación por pasos
-  step: 1 | 2 | 3 | 4;
-  setStep: (n: 1 | 2 | 3 | 4) => void;
+  step: 1 | 2 | 3;
+  setStep: (n: 1 | 2 | 3) => void;
   error?: string | null;
 
   // Cabecera
