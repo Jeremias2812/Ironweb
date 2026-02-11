@@ -16,6 +16,24 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
+
+## Conectar tu proyecto Supabase
+1. Crea el archivo `.env.local` en la raíz del proyecto (puedes copiar `.env.example`).
+2. Completa estas variables:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+# opcional para backend/API (no usar en frontend):
+SUPABASE_SERVICE_ROLE_KEY=...
+```
+
+3. Reinicia el servidor de Next.js (`npm run dev`).
+
+> Seguridad: si compartiste públicamente tu `service_role`, **rótala** en Supabase (Project Settings > API > Regenerate service_role key).
+> Nunca pongas `SUPABASE_SERVICE_ROLE_KEY` en código cliente ni variables `NEXT_PUBLIC_*`.
+
 ## Base de datos
 1. Abrir Supabase SQL Editor.
 2. Ejecutar `db/supabase_oilgas.sql` completo (recomendado para tu nueva base).
