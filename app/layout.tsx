@@ -1,35 +1,21 @@
-import "./globals.css";
-import SupabaseSession from "@/components/SupabaseSession";
-import TopBar from "@/components/TopBar";
+import './globals.css';
+import SupabaseSession from '@/components/SupabaseSession';
+import AppShell from '@/components/AppShell';
+import RequireAuth from '@/components/RequireAuth';
 
 export const metadata = {
-  title: "Kynetic IT",
-  description: "MVP web para gestión de piezas, servicios y despachos",
-  manifest: "/manifest.json",
+  title: 'App Herramientas · Oil & Gas',
+  description: 'Gestión de herramientas, remitos y mantenimiento con Next.js + Supabase',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
       <body>
-        {process.env.NODE_ENV === "production" && (
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `
-                if ('serviceWorker' in navigator) {
-                  window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('/sw.js');
-                  });
-                }
-              `,
-            }}
-          />
-        )}
-        <div className="container py-6">
-          <SupabaseSession />
-          <TopBar />
-          {children}
-        </div>
+        <SupabaseSession />
+        <RequireAuth>
+          <AppShell>{children}</AppShell>
+        </RequireAuth>
       </body>
     </html>
   );

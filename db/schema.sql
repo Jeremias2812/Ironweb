@@ -1,186 +1,210 @@
+create extension if not exists pgcrypto;
 
--- Habilitar pgvector (en Supabase: Database > Extensions)
-create extension if not exists vector;
+-- Enums
+create type tool_status as enum ('available', 'in_use', 'maintenance', 'retired');
+create type remito_status as enum ('draft', 'closed');
+create type wo_status as enum ('open', 'in_progress', 'closed');
+create type warehouse_type as enum ('field_team', 'maintenance_center', 'other');
 
--- Roles base (alternativamente usar enum)
-create table if not exists roles (
-  id serial primary key,
-  name text unique not null -- 'operator' | 'technician' | 'supervisor' | 'admin'
-);
-
--- Usuarios (referenciando auth.users de Supabase con UUID)
-create table if not exists app_users (
+-- Core tables
+create table if not exists warehouses (
   id uuid primary key default gen_random_uuid(),
-  auth_user_id uuid not null unique, -- auth.users.id
-  email text not null unique,
-  full_name text,
-  role text not null default 'operator', -- simple: usa texto; también puedes FK a roles
-  created_at timestamptz default now()
+  name text not null unique,
+  type warehouse_type not null,
+  notes text,
+  created_at timestamptz not null default now()
 );
 
--- Piezas
-create table if not exists parts (
+create table if not exists tools (
   id uuid primary key default gen_random_uuid(),
-  code text unique not null,
-  type text,
-  client text,
-  status text default 'received',
-  created_by uuid references app_users(id),
-  created_at timestamptz default now()
+  code text not null unique,
+  description text not null,
+  status tool_status not null default 'available',
+  warehouse_id uuid references warehouses(id),
+  usage_hours numeric(10,2) not null default 0,
+  next_maintenance_hours numeric(10,2) not null default 100,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
--- Servicios
-create table if not exists services (
+create table if not exists remitos (
   id uuid primary key default gen_random_uuid(),
-  part_id uuid references parts(id) on delete cascade,
-  service_type text,
-  priority text,
-  status text default 'pending',
-  created_at timestamptz default now()
+  number text not null unique,
+  origin_id uuid not null references warehouses(id),
+  destination_id uuid not null references warehouses(id),
+  status remito_status not null default 'draft',
+  closed_by uuid,
+  closed_at timestamptz,
+  created_at timestamptz not null default now()
 );
 
--- Órdenes de trabajo
+create table if not exists remito_lines (
+  id uuid primary key default gen_random_uuid(),
+  remito_id uuid not null references remitos(id) on delete cascade,
+  tool_id uuid not null references tools(id),
+  usage_delta numeric(10,2) not null default 0,
+  created_at timestamptz not null default now(),
+  unique (remito_id, tool_id)
+);
+
+create table if not exists tool_movements (
+  id uuid primary key default gen_random_uuid(),
+  tool_id uuid not null references tools(id),
+  remito_id uuid not null references remitos(id),
+  from_warehouse_id uuid references warehouses(id),
+  to_warehouse_id uuid references warehouses(id),
+  usage_delta numeric(10,2) not null default 0,
+  moved_by uuid,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists work_orders (
   id uuid primary key default gen_random_uuid(),
-  service_id uuid references services(id) on delete cascade,
-  assigned_to uuid references app_users(id),
-  status text default 'planned',
-  eta_hours numeric,
-  spent_hours numeric,
-  created_at timestamptz default now()
+  title text not null,
+  description text,
+  tool_id uuid not null references tools(id),
+  status wo_status not null default 'open',
+  opened_by uuid,
+  closed_by uuid,
+  created_at timestamptz not null default now(),
+  closed_at timestamptz
 );
 
--- Tareas
-create table if not exists tasks (
-  id uuid primary key default gen_random_uuid(),
-  work_order_id uuid references work_orders(id) on delete cascade,
-  title text,
-  status text default 'todo',
-  planned_minutes int,
-  spent_minutes int,
-  created_at timestamptz default now()
-);
-
--- Certificados
-create table if not exists certificates (
-  id uuid primary key default gen_random_uuid(),
-  service_id uuid references services(id) on delete cascade,
-  pdf_url text,
-  signed_by uuid references app_users(id),
-  hash text,
-  created_at timestamptz default now()
-);
-
--- Despachos
-create table if not exists shipments (
-  id uuid primary key default gen_random_uuid(),
-  client text,
-  destination text,
-  status text default 'open',
-  created_at timestamptz default now()
-);
-
-create table if not exists shipment_items (
-  id uuid primary key default gen_random_uuid(),
-  shipment_id uuid references shipments(id) on delete cascade,
-  part_id uuid references parts(id),
-  qty int default 1
-);
-
--- Documentos para RAG (texto + embedding)
-create table if not exists documents (
-  id uuid primary key default gen_random_uuid(),
-  title text,
-  content text,
-  embedding vector(1536),
-  created_at timestamptz default now()
-);
-
--- Auditoría simple
-create table if not exists audit_log (
-  id bigserial primary key,
-  auth_user_id uuid,
-  action text,
-  entity text,
-  entity_id uuid,
-  diff jsonb,
-  created_at timestamptz default now()
-);
-
--- RLS (ejemplo básico): habilitar y permitir acceso por usuario/rol
-alter table app_users enable row level security;
-alter table parts enable row level security;
-alter table services enable row level security;
-alter table work_orders enable row level security;
-alter table tasks enable row level security;
-alter table certificates enable row level security;
-alter table shipments enable row level security;
-alter table shipment_items enable row level security;
-alter table documents enable row level security;
-alter table audit_log enable row level security;
-
--- Políticas de ejemplo (ajusta a tu modelo real)
--- 1) app_users: cada quien ve su propio registro; admin/supervisor ven todos
-create policy "app_users_select_self_or_admin"
-on app_users for select
-using (
-  auth.uid() = auth_user_id
-  or exists (select 1 from app_users au where au.auth_user_id = auth.uid() and au.role in ('admin','supervisor'))
-);
-
-create policy "app_users_update_self_or_admin"
-on app_users for update
-using (auth.uid() = auth_user_id or exists (select 1 from app_users au where au.auth_user_id = auth.uid() and au.role in ('admin')))
-with check (auth.uid() = auth_user_id or exists (select 1 from app_users au where au.auth_user_id = auth.uid() and au.role in ('admin')));
-
--- 2) parts: lectura para roles ('operator','technician','supervisor','admin'); escritura operadores (creación) y asignados
-create policy "parts_read_roles"
-on parts for select
-using (exists (select 1 from app_users au where au.auth_user_id = auth.uid() and au.role in ('operator','technician','supervisor','admin')));
-
-create policy "parts_insert_operator"
-on parts for insert
-with check (exists (select 1 from app_users au where au.auth_user_id = auth.uid() and au.role in ('operator','supervisor','admin')));
-
-create policy "parts_update_supervisor_or_creator"
-on parts for update
-using (
-  created_by = (select id from app_users where auth_user_id = auth.uid())
-  or exists (select 1 from app_users au where au.auth_user_id = auth.uid() and au.role in ('supervisor','admin'))
-);
-
--- Replica el patrón para services/work_orders/tasks/etc. según tu necesidad.
-
--- Índices sugeridos
-create index if not exists idx_parts_code on parts(code);
-create index if not exists idx_services_part on services(part_id);
-create index if not exists idx_wo_service on work_orders(service_id);
-create index if not exists idx_tasks_wo on tasks(work_order_id);
-create index if not exists idx_docs_embedding on documents using ivfflat (embedding vector_cosine_ops);
-
--- Bridge: work orders ↔ services (n..n)
-create table if not exists work_order_services (
+create table if not exists maintenance_logs (
   id uuid primary key default gen_random_uuid(),
   work_order_id uuid not null references work_orders(id) on delete cascade,
-  service_id uuid not null references services(id) on delete cascade,
-  created_at timestamptz not null default now(),
-  unique (work_order_id, service_id)
+  tool_id uuid not null references tools(id),
+  note text not null,
+  hours_spent numeric(10,2) not null default 0,
+  created_at timestamptz not null default now()
 );
 
-alter table work_order_services enable row level security;
+-- Indexes
+create index if not exists idx_tools_status on tools(status);
+create index if not exists idx_tools_warehouse_id on tools(warehouse_id);
+create index if not exists idx_remitos_status on remitos(status);
+create index if not exists idx_remito_lines_remito_id on remito_lines(remito_id);
+create index if not exists idx_tool_movements_tool_id on tool_movements(tool_id);
+create index if not exists idx_work_orders_status on work_orders(status);
+create index if not exists idx_maintenance_logs_wo_id on maintenance_logs(work_order_id);
+
+-- Triggers for updated_at
+create or replace function set_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists trg_tools_updated_at on tools;
+create trigger trg_tools_updated_at
+before update on tools
+for each row execute function set_updated_at();
+
+-- RPC: close remito
+create or replace function close_remito(p_remito_id uuid, p_user_id uuid)
+returns void
+language plpgsql
+security definer
+as $$
+declare
+  v_status remito_status;
+  v_origin uuid;
+  v_dest uuid;
+  v_line record;
+begin
+  select status, origin_id, destination_id
+    into v_status, v_origin, v_dest
+  from remitos
+  where id = p_remito_id
+  for update;
+
+  if not found then
+    raise exception 'Remito no encontrado';
+  end if;
+
+  if v_status = 'closed' then
+    raise exception 'El remito ya está cerrado';
+  end if;
+
+  for v_line in
+    select tool_id, usage_delta from remito_lines where remito_id = p_remito_id
+  loop
+    update tools
+      set warehouse_id = v_dest,
+          usage_hours = usage_hours + coalesce(v_line.usage_delta, 0)
+    where id = v_line.tool_id;
+
+    insert into tool_movements(tool_id, remito_id, from_warehouse_id, to_warehouse_id, usage_delta, moved_by)
+    values (v_line.tool_id, p_remito_id, v_origin, v_dest, coalesce(v_line.usage_delta, 0), p_user_id);
+  end loop;
+
+  update remitos
+    set status = 'closed',
+        closed_by = p_user_id,
+        closed_at = now()
+  where id = p_remito_id;
+end;
+$$;
+
+-- RPC: set work order status
+create or replace function set_work_order_status(p_wo_id uuid, p_status wo_status)
+returns void
+language plpgsql
+security definer
+as $$
+declare
+  v_tool_id uuid;
+begin
+  update work_orders
+    set status = p_status,
+        closed_at = case when p_status = 'closed' then now() else null end
+  where id = p_wo_id
+  returning tool_id into v_tool_id;
+
+  if not found then
+    raise exception 'OT no encontrada';
+  end if;
+
+  if p_status in ('open', 'in_progress') then
+    update tools set status = 'maintenance' where id = v_tool_id;
+  elsif p_status = 'closed' then
+    update tools set status = 'available' where id = v_tool_id;
+  end if;
+end;
+$$;
+
+-- RLS basic policies for authenticated users
+alter table warehouses enable row level security;
+alter table tools enable row level security;
+alter table remitos enable row level security;
+alter table remito_lines enable row level security;
+alter table tool_movements enable row level security;
+alter table work_orders enable row level security;
+alter table maintenance_logs enable row level security;
 
 do $$
 begin
-  if not exists (select 1 from pg_policies where tablename='work_order_services' and policyname='work_order_services_select') then
-    create policy work_order_services_select on work_order_services for select using (true);
+  if not exists (select 1 from pg_policies where tablename = 'warehouses' and policyname = 'warehouses_auth_all') then
+    create policy warehouses_auth_all on warehouses for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
   end if;
-  if not exists (select 1 from pg_policies where tablename='work_order_services' and policyname='work_order_services_insert') then
-    create policy work_order_services_insert on work_order_services for insert with check (true);
+  if not exists (select 1 from pg_policies where tablename = 'tools' and policyname = 'tools_auth_all') then
+    create policy tools_auth_all on tools for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
   end if;
-  if not exists (select 1 from pg_policies where tablename='work_order_services' and policyname='work_order_services_update') then
-    create policy work_order_services_update on work_order_services for update using (true) with check (true);
+  if not exists (select 1 from pg_policies where tablename = 'remitos' and policyname = 'remitos_auth_all') then
+    create policy remitos_auth_all on remitos for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
   end if;
-  if not exists (select 1 from pg_policies where tablename='work_order_services' and policyname='work_order_services_delete') then
-    create policy work_order_services_delete on work_order_services for delete using (true);
+  if not exists (select 1 from pg_policies where tablename = 'remito_lines' and policyname = 'remito_lines_auth_all') then
+    create policy remito_lines_auth_all on remito_lines for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+  end if;
+  if not exists (select 1 from pg_policies where tablename = 'tool_movements' and policyname = 'tool_movements_auth_all') then
+    create policy tool_movements_auth_all on tool_movements for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+  end if;
+  if not exists (select 1 from pg_policies where tablename = 'work_orders' and policyname = 'work_orders_auth_all') then
+    create policy work_orders_auth_all on work_orders for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+  end if;
+  if not exists (select 1 from pg_policies where tablename = 'maintenance_logs' and policyname = 'maintenance_logs_auth_all') then
+    create policy maintenance_logs_auth_all on maintenance_logs for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
   end if;
 end $$;
