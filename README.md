@@ -1,70 +1,51 @@
-# Ironweb
+# App Herramientas (Next.js + Supabase)
 
-Aplicación Next.js. A continuación se incluye una guía rápida para ejecutarla de forma local con Node.js o dentro de un contenedor Docker (ideal para usar con Docker Desktop en Windows).
+Aplicación web para Oil & Gas enfocada en inventario de herramientas, remitos/movimientos y mantenimiento.
 
-## Requisitos previos
+## Stack
+- Next.js 14 (App Router + TypeScript)
+- Supabase (Postgres, Auth, Realtime, RPC)
+- Tailwind CSS
 
-- Node.js 18 o superior
-- npm
-- (Opcional) Docker Desktop 4.24+ para Windows, macOS o Linux
+## Variables de entorno
+Crear `.env.local` con:
 
-## Ejecución local con Node.js
+```bash
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```
+
+## Base de datos
+1. Abrir Supabase SQL Editor.
+2. Ejecutar `db/schema.sql` completo.
+3. Verificar que existan:
+   - tablas: `warehouses`, `tools`, `remitos`, `remito_lines`, `tool_movements`, `work_orders`, `maintenance_logs`
+   - RPC: `close_remito`, `set_work_order_status`
+
+## Ejecutar local
 
 ```bash
 npm install
 npm run dev
 ```
 
-La aplicación estará disponible en `http://localhost:3000`.
+App disponible en `http://localhost:3000`.
 
-## Ejecución con Docker
+## Secciones implementadas
+- Dashboard
+- Inventario (+ detalle + alta + edición)
+- Depósitos/Ubicaciones (CRUD base)
+- Movimientos/Remitos (alta + cierre por RPC)
+- Mantenimiento/OT (alta + cambio de estado por RPC + logs)
+- Login con Supabase Auth (email/password)
 
-1. Asegúrate de que Docker Desktop está en ejecución.
-2. Clona este repositorio y sitúate en la carpeta del proyecto.
-3. Construye la imagen:
-
-   ```bash
-   docker build -t ironweb-app .
-   ```
-
-4. Inicia el contenedor en modo detached mapeando el puerto 3000:
-
-   ```bash
-   docker run -d --name ironweb -p 3000:3000 ironweb-app
-   ```
-
-5. Abre `http://localhost:3000` en tu navegador.
-
-Para detener el contenedor:
+## Descargar el código con modificaciones
+Puedes generar un ZIP del proyecto (sin `node_modules`, `.next` y `.git`) con:
 
 ```bash
-docker stop ironweb
+./scripts/export_project.sh
 ```
 
-Y para eliminarlo:
+El archivo se guarda por defecto en `artifacts/ironweb-modificado.zip`.
 
-```bash
-docker rm ironweb
-```
-
-## Variables de entorno
-
-Si tu aplicación necesita variables de entorno, crea un archivo `.env` en la raíz del proyecto y define allí tus claves. Para Docker, puedes pasarlas con la opción `--env-file`:
-
-```bash
-docker run -d --name ironweb --env-file .env -p 3000:3000 ironweb-app
-```
-
-## Comandos útiles
-
-- `npm run build`: genera el build de producción.
-- `npm run start`: sirve la aplicación en modo producción (se usa dentro del contenedor).
-- `npm run lint`: ejecuta el linter.
-
-## Solución de problemas en Windows
-
-- Verifica que Docker Desktop tenga recursos suficientes (CPU/RAM) asignados.
-- Si el puerto 3000 ya está en uso, cámbialo con `-p 8080:3000` (host:contenedor).
-- Ejecuta PowerShell o la terminal como administrador si tienes problemas de permisos.
-
-¡Listo! Ahora tu aplicación está lista para ejecutarse de forma dockerizada en Docker Desktop para Windows.

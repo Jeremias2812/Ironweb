@@ -1,110 +1,73 @@
 'use client';
 
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabaseClient';
+import { useEffect, useMemo, useState } from 'react';
+import { getSupabaseBrowserClient } from '@/lib/supabase/browser';
 
-export default function Dashboard() {
-  const supabase = createClient();
-
+export default function DashboardPage() {
+  const supabase = getSupabaseBrowserClient();
   const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState<string | null>(null);
-
-  const [total, setTotal]               = useState(0);
-  const [countNew, setCountNew]         = useState(0);
-  const [countInProg, setCountInProg]   = useState(0);
-  const [countPaused, setCountPaused]   = useState(0);
-  const [countResolved, setCountResolved] = useState(0);
-  const [reloadTs, setReloadTs] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [totals, setTotals] = useState({ tools: 0, remitosOpen: 0, woOpen: 0, woInProgress: 0, overdue: 0, upcoming: 0 });
 
   useEffect(() => {
-    let active = true;
     const load = async () => {
-      setLoading(true); setError(null);
+      setLoading(true);
+      setError(null);
       try {
-        const qTotal = supabase.from('work_orders').select('id', { count: 'exact', head: true });
-        const qNew   = supabase.from('work_orders').select('id', { count: 'exact', head: true }).eq('status', 'new');
-        const qProg  = supabase.from('work_orders').select('id', { count: 'exact', head: true }).eq('status', 'in_progress');
-        const qPause = supabase.from('work_orders').select('id', { count: 'exact', head: true }).eq('status', 'paused');
-        const qRes   = supabase.from('work_orders').select('id', { count: 'exact', head: true }).eq('status', 'resolved');
-        const [t, n, p, pa, r] = await Promise.all([qTotal, qNew, qProg, qPause, qRes]);
-        if (!active) return;
-        if (t.error) throw t.error; if (n.error) throw n.error; if (p.error) throw p.error; if (pa.error) throw pa.error; if (r.error) throw r.error;
-        setTotal(t.count ?? 0);
-        setCountNew(n.count ?? 0);
-        setCountInProg(p.count ?? 0);
-        setCountPaused(pa.count ?? 0);
-        setCountResolved(r.count ?? 0);
+        const [tools, remitos, woOpen, woInProgress, overdue, upcoming] = await Promise.all([
+          supabase.from('tools').select('id', { count: 'exact', head: true }),
+          supabase.from('remitos').select('id', { count: 'exact', head: true }).eq('status', 'draft'),
+          supabase.from('work_orders').select('id', { count: 'exact', head: true }).eq('status', 'open'),
+          supabase.from('work_orders').select('id', { count: 'exact', head: true }).eq('status', 'in_progress'),
+          supabase.from('tools').select('id', { count: 'exact', head: true }).lt('next_maintenance_hours', 0),
+          supabase.from('tools').select('id', { count: 'exact', head: true }).gte('next_maintenance_hours', 0).lte('next_maintenance_hours', 20),
+        ]);
+
+        const firstError = [tools, remitos, woOpen, woInProgress, overdue, upcoming].find((r) => r.error)?.error;
+        if (firstError) throw firstError;
+
+        setTotals({
+          tools: tools.count ?? 0,
+          remitosOpen: remitos.count ?? 0,
+          woOpen: woOpen.count ?? 0,
+          woInProgress: woInProgress.count ?? 0,
+          overdue: overdue.count ?? 0,
+          upcoming: upcoming.count ?? 0,
+        });
       } catch (e: any) {
-        if (!active) return;
-        setError(e?.message || 'Error cargando métricas');
+        setError(e.message ?? 'No se pudieron cargar métricas');
       } finally {
-        if (!active) return;
         setLoading(false);
       }
     };
-    load();
-    return () => { active = false; };
-  }, [supabase, reloadTs]);
 
-  const MetricCard = ({ title, value, color }: { title: string; value: number; color?: string }) => (
-    <div className="card p-4">
-      <div className="text-sm text-white/70 flex items-center gap-2">
-        {color ? <span className="inline-block w-1.5 h-3 rounded-sm" style={{ backgroundColor: color }} /> : null}
-        {title}
-      </div>
-      <div className="text-2xl font-bold mt-1">{loading ? '…' : value}</div>
-    </div>
+    load();
+  }, [supabase]);
+
+  const cards = useMemo(
+    () => [
+      { title: 'Total herramientas', value: totals.tools },
+      { title: 'Remitos abiertos', value: totals.remitosOpen },
+      { title: 'OT abiertas', value: totals.woOpen },
+      { title: 'OT en curso', value: totals.woInProgress },
+      { title: 'Mantenimiento vencido', value: totals.overdue },
+      { title: 'Mantenimiento próximo (<=20hs)', value: totals.upcoming },
+    ],
+    [totals],
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <button
-          className="btn btn-ghost"
-          onClick={() => setReloadTs(Date.now())}
-          disabled={loading}
-          title="Actualizar métricas"
-        >
-          {loading ? 'Actualizando…' : 'Actualizar'}
-        </button>
-      </div>
-
+    <section className="space-y-4">
+      <h1 className="text-2xl font-bold">Dashboard</h1>
       {error && <div className="card text-red-300">{error}</div>}
-
-      {/* Métricas de órdenes */}
-      <div className="grid md:grid-cols-5 gap-4">
-        <MetricCard title="Total órdenes" value={total} />
-        <MetricCard title="Nuevo" value={countNew} color="#ef4444" />
-        <MetricCard title="En proceso" value={countInProg} color="#eab308" />
-        <MetricCard title="Pausado" value={countPaused} color="#9ca3af" />
-        <MetricCard title="Resuelto" value={countResolved} color="#22c55e" />
-      </div>
-
-      {/* Accesos directos */}
       <div className="grid md:grid-cols-3 gap-4">
-        <div className="card">
-          <h3 className="font-semibold mb-2">Piezas</h3>
-          <p className="text-sm text-white/70">Alta y seguimiento de piezas.</p>
-          <Link className="btn mt-3" href="/parts">Abrir</Link>
-        </div>
-        <div className="card">
-          <h3 className="font-semibold mb-2">Órdenes de trabajo</h3>
-          <p className="text-sm text-white/70">Planificación y tareas.</p>
-          <Link className="btn mt-3" href="/work-orders">Abrir</Link>
-        </div>
-        <div className="card">
-          <h3 className="font-semibold mb-2">Chat IA</h3>
-          <p className="text-sm text-white/70">Consulta datos.</p>
-          <Link className="btn mt-3" href="/chat">Abrir</Link>
-        </div>
-        <div className="card">
-          <h3 className="font-semibold mb-2">Informes</h3>
-          <p className="text-sm text-white/70">Listado de informes generados.</p>
-          <Link className="btn mt-3" href="/reports">Abrir</Link>
-        </div>
+        {cards.map((card) => (
+          <article key={card.title} className="card">
+            <h2 className="text-sm text-white/70">{card.title}</h2>
+            <p className="text-3xl font-semibold mt-2">{loading ? '...' : card.value}</p>
+          </article>
+        ))}
       </div>
-    </div>
+    </section>
   );
 }
