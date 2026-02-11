@@ -49,3 +49,13 @@ Puedes generar un ZIP del proyecto (sin `node_modules`, `.next` y `.git`) con:
 
 El archivo se guarda por defecto en `artifacts/ironweb-modificado.zip`.
 
+
+## Usuario de acceso
+Si no tienes usuario creado en Supabase, puedes entrar desde `/login` usando el botón **"Crear / usar usuario demo"**.
+
+Credenciales demo:
+- Email: `demo@ironweb.local`
+- Password: `Demo123456!`
+
+> Nota: si en tu proyecto Supabase está activa la confirmación de email, deberás confirmar el correo antes del primer login.
+
