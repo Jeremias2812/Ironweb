@@ -18,8 +18,9 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
 ## Base de datos
 1. Abrir Supabase SQL Editor.
-2. Ejecutar `db/schema.sql` completo.
-3. Verificar que existan:
+2. Ejecutar `db/supabase_oilgas.sql` completo (recomendado para tu nueva base).
+3. (Opcional) usar `db/schema.sql` como referencia anterior.
+4. Verificar que existan:
    - tablas: `warehouses`, `tools`, `remitos`, `remito_lines`, `tool_movements`, `work_orders`, `maintenance_logs`
    - RPC: `close_remito`, `set_work_order_status`
 
